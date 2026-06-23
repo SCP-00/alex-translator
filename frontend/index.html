@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Alex — Translator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #14141f; --card: #1a1a2e;
+    --text: #e2e8f0; --muted: #64748b; --accent: #2563eb;
+    --border: #ffffff0a; --radius: 12px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  header h1 { font-size: 16px; font-weight: 600; }
+  .lang-row { display: flex; gap: 8px; margin-left: auto; }
+  .lang-row select {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: var(--radius); font-size: 13px; outline: none;
+  }
+  .swap-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    width: 36px; height: 36px; border-radius: var(--radius); cursor: pointer;
+    font-size: 16px; transition: all .2s;
+  }
+  .swap-btn:hover { background: var(--accent); color: white; }
+  .split-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-height: 0; }
+  .panel { display: flex; flex-direction: column; }
+  .panel:first-child { border-right: 1px solid var(--border); }
+  .panel-header {
+    padding: 12px 16px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); background: var(--surface); flex-shrink: 0;
+  }
+  .panel textarea {
+    flex: 1; background: var(--bg); border: none; color: var(--text); padding: 16px;
+    font-size: 15px; font-family: inherit; resize: none; outline: none; line-height: 1.6;
+  }
+  .panel textarea::placeholder { color: #ffffff20; }
+  .panel-right .panel-header { display: flex; align-items: center; justify-content: space-between; }
+  .panel-right .panel-header .actions { display: flex; gap: 8px; }
+  .panel-right .panel-header button {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: all .2s;
+  }
+  .panel-right .panel-header button:hover { background: #ffffff0a; color: var(--text); }
+  .output-area {
+    flex: 1; padding: 16px; font-size: 15px; line-height: 1.6; overflow-y: auto;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .output-area:empty::after { content: 'Translation will appear here'; color: #ffffff20; }
+  .status-bar {
+    padding: 8px 16px; font-size: 12px; color: var(--muted);
+    background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0;
+    display: flex; gap: 16px;
+  }
+  .status-bar .stat { display: flex; align-items: center; gap: 4px; }
+  .mic-btn {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    width: 56px; height: 56px; border-radius: 50%; background: var(--accent);
+    border: none; color: white; font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 20px #2563eb66; transition: all .2s; z-index: 10;
+  }
+  .mic-btn:hover { transform: translateX(-50%) scale(1.1); }
+  .mic-btn.recording { background: #ef4444; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 #ef444466; } 100% { box-shadow: 0 0 0 20px transparent; } }
+  @media (max-width: 600px) { .split-view { grid-template-columns: 1fr; } .panel:first-child { border-right: none; border-bottom: 1px solid var(--border); } }
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:20px">🌍</span>
+  <h1>Translator</h1>
+  <div class="lang-row">
+    <select id="from-lang"><option value="auto">Auto</option><option value="es">Español</option><option value="en">English</option><option value="ja">日本語</option><option value="fr">Français</option><option value="de">Deutsch</option></select>
+    <button class="swap-btn" onclick="swapLangs()">⇄</button>
+    <select id="to-lang"><option value="es">Español</option><option value="en" selected>English</option><option value="ja">日本語</option><option value="fr">Français</option><option value="de">Deutsch</option></select>
+  </div>
+</header>
+
+<div class="split-view">
+  <div class="panel">
+    <div class="panel-header">Input</div>
+    <textarea id="input" placeholder="Type or speak text to translate..." oninput="translateText()"></textarea>
+  </div>
+  <div class="panel panel-right">
+    <div class="panel-header">
+      <span>Output</span>
+      <div class="actions">
+        <button onclick="playOutput()" title="Read aloud">🔊</button>
+        <button onclick="copyOutput()" title="Copy">📋</button>
+        <button onclick="clearAll()" title="Clear">✕</button>
+      </div>
+    </div>
+    <div class="output-area" id="output"></div>
+  </div>
+</div>
+
+<div class="status-bar" id="status-bar">
+  <span class="stat">⚡ <span id="stat-time">Ready</span></span>
+  <span class="stat" id="stat-detail"></span>
+</div>
+
+<button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
+
+<script>
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let debounceTimer = null;
+
+function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+function swapLangs() {
+  const from = document.getElementById('from-lang');
+  const to = document.getElementById('to-lang');
+  [from.value, to.value] = [to.value, from.value];
+  translateText();
+}
+
+async function translateText() {
+  clearTimeout(debounceTimer);
+  const text = document.getElementById('input').value.trim();
+  if (!text) { document.getElementById('output').textContent = ''; return; }
+  debounceTimer = setTimeout(async () => {
+    const from = document.getElementById('from-lang').value;
+    const to = document.getElementById('to-lang').value;
+    document.getElementById('stat-time').textContent = 'Translating...';
+    try {
+      const resp = await fetch('/api/translate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, from_lang: from, to_lang: to })
+      });
+      const data = await resp.json();
+      if (data.translation) {
+        document.getElementById('output').textContent = data.translation;
+        document.getElementById('stat-time').textContent = `${data.translation_time_ms}ms`;
+        document.getElementById('stat-detail').textContent = `${data.from_lang} → ${data.to_lang}`;
+      } else if (data.error) {
+        document.getElementById('output').textContent = '⚠️ ' + data.error;
+      }
+    } catch(e) {
+      document.getElementById('output').textContent = '⚠️ Server error';
+    }
+  }, 300);
+}
+
+async function playOutput() {
+  const text = document.getElementById('output').textContent;
+  if (!text) return;
+  const lang = document.getElementById('to-lang').value;
+  try {
+    const resp = await fetch('/api/tts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, language: { es:'Spanish',en:'English',ja:'Japanese',fr:'French',de:'German' }[lang] || 'English' })
+    });
+    if (!resp.ok) return;
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    new Audio(url).play();
+  } catch(e) {}
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').textContent;
+  if (text) navigator.clipboard.writeText(text);
+}
+
+function clearAll() {
+  document.getElementById('input').value = '';
+  document.getElementById('output').textContent = '';
+  document.getElementById('stat-detail').textContent = '';
+  document.getElementById('stat-time').textContent = 'Ready';
+}
+
+async function toggleMic() {
+  const btn = document.getElementById('mic-btn');
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      audioChunks = [];
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const b64 = reader.result.split(',')[1];
+          document.getElementById('stat-time').textContent = 'Transcribing...';
+          try {
+            const resp = await fetch('/api/asr', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio: b64, lang: document.getElementById('from-lang').value })
+            });
+            const data = await resp.json();
+            if (data.text) {
+              document.getElementById('input').value = data.text;
+              translateText();
+            }
+          } catch(e) {}
+        };
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      btn.classList.add('recording');
+      btn.textContent = '⏹';
+    } catch(e) { alert('Microphone access denied'); }
+  } else {
+    if (mediaRecorder) mediaRecorder.stop();
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  }
+}
+
+document.getElementById('input').focus();
+</script>
+</body>
+</html>
