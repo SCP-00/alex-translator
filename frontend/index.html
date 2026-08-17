@@ -2,74 +2,83 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c0a09">
 <title>Alex — Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0f; --surface: #14141f; --card: #1a1a2e;
-    --text: #e2e8f0; --muted: #64748b; --accent: #2563eb;
-    --border: #ffffff0a; --radius: 12px;
+    --bg: #0c0a09; --surface: #1c1917; --card: #292524;
+    --border: rgba(250,250,249,.09);
+    --text: #fafaf9; --text-2: rgba(250,250,249,.7); --text-3: rgba(250,250,249,.42);
+    --accent: #f0b429; --accent-soft: rgba(240,180,41,.14);
+    --danger: #e5484d;
   }
+  html { color-scheme: dark; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: 'IBM Plex Sans', 'Hanken Grotesk', 'Barlow', system-ui, sans-serif;
     background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased; letter-spacing: .01em;
   }
   header {
-    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    padding: 14px 24px; display: flex; align-items: center; gap: 16px;
     background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
   }
-  header h1 { font-size: 16px; font-weight: 600; }
+  header h1 { font-size: 15px; font-weight: 400; letter-spacing: .02em; }
   .lang-row { display: flex; gap: 8px; margin-left: auto; }
   .lang-row select {
     background: var(--card); border: 1px solid var(--border); color: var(--text);
-    padding: 6px 12px; border-radius: var(--radius); font-size: 13px; outline: none;
+    padding: 9px 14px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer;
   }
+  .lang-row select:hover { border-color: var(--accent); }
   .swap-btn {
-    background: var(--card); border: 1px solid var(--border); color: var(--muted);
-    width: 36px; height: 36px; border-radius: var(--radius); cursor: pointer;
-    font-size: 16px; transition: all .2s;
+    background: var(--card); border: 1px solid var(--border); color: var(--text-2);
+    width: 38px; height: 38px; cursor: pointer; font-size: 15px; transition: all .15s;
   }
-  .swap-btn:hover { background: var(--accent); color: white; }
+  .swap-btn:hover { background: var(--accent); border-color: var(--accent); color: #1c1917; }
   .split-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-height: 0; }
   .panel { display: flex; flex-direction: column; }
   .panel:first-child { border-right: 1px solid var(--border); }
   .panel-header {
-    padding: 12px 16px; font-size: 12px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .5px; color: var(--muted); background: var(--surface); flex-shrink: 0;
+    padding: 14px 20px; font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--text-3); background: var(--surface); flex-shrink: 0;
   }
   .panel textarea {
-    flex: 1; background: var(--bg); border: none; color: var(--text); padding: 16px;
-    font-size: 15px; font-family: inherit; resize: none; outline: none; line-height: 1.6;
+    flex: 1; background: var(--bg); border: none; color: var(--text); padding: 20px;
+    font-size: 16px; font-family: inherit; resize: none; outline: none; line-height: 1.7; font-weight: 300;
   }
-  .panel textarea::placeholder { color: #ffffff20; }
+  .panel textarea::placeholder { color: var(--text-3); }
   .panel-right .panel-header { display: flex; align-items: center; justify-content: space-between; }
-  .panel-right .panel-header .actions { display: flex; gap: 8px; }
+  .panel-right .panel-header .actions { display: flex; gap: 4px; }
   .panel-right .panel-header button {
-    background: none; border: none; color: var(--muted); cursor: pointer;
-    font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: all .2s;
+    background: none; border: 1px solid transparent; color: var(--text-3); cursor: pointer;
+    font-size: 13px; padding: 6px 10px; min-height: 34px; transition: all .15s; font-family: inherit;
   }
-  .panel-right .panel-header button:hover { background: #ffffff0a; color: var(--text); }
+  .panel-right .panel-header button:hover { background: var(--card); color: var(--text); }
   .output-area {
-    flex: 1; padding: 16px; font-size: 15px; line-height: 1.6; overflow-y: auto;
-    white-space: pre-wrap; word-wrap: break-word;
+    flex: 1; padding: 20px; font-size: 16px; line-height: 1.7; overflow-y: auto;
+    white-space: pre-wrap; word-wrap: break-word; font-weight: 300;
   }
-  .output-area:empty::after { content: 'Translation will appear here'; color: #ffffff20; }
+  .output-area:empty::after { content: 'Translation will appear here'; color: var(--text-3); }
   .status-bar {
-    padding: 8px 16px; font-size: 12px; color: var(--muted);
+    padding: 10px 20px; font-size: 11px; color: var(--text-3); letter-spacing: .06em;
     background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0;
-    display: flex; gap: 16px;
+    display: flex; gap: 24px; text-transform: uppercase;
   }
-  .status-bar .stat { display: flex; align-items: center; gap: 4px; }
+  .status-bar .stat { display: flex; align-items: center; gap: 6px; }
   .mic-btn {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    width: 56px; height: 56px; border-radius: 50%; background: var(--accent);
-    border: none; color: white; font-size: 24px; cursor: pointer;
-    box-shadow: 0 4px 20px #2563eb66; transition: all .2s; z-index: 10;
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    width: 52px; height: 52px; background: var(--accent);
+    border: none; color: #1c1917; font-size: 20px; cursor: pointer;
+    transition: opacity .15s; z-index: 10;
   }
-  .mic-btn:hover { transform: translateX(-50%) scale(1.1); }
-  .mic-btn.recording { background: #ef4444; animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0% { box-shadow: 0 0 0 0 #ef444466; } 100% { box-shadow: 0 0 0 20px transparent; } }
+  .mic-btn:hover { opacity: .85; }
+  .mic-btn.recording { background: var(--danger); color: #fff; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(229,72,77,.4); } 100% { box-shadow: 0 0 0 20px transparent; } }
   @media (max-width: 600px) { .split-view { grid-template-columns: 1fr; } .panel:first-child { border-right: none; border-bottom: 1px solid var(--border); } }
 </style>
 </head>
@@ -114,6 +123,7 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
 let debounceTimer = null;
+let translateSeq = 0;   // para ignorar respuestas desactualizadas (race condition)
 
 function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
 
@@ -128,9 +138,12 @@ async function translateText() {
   clearTimeout(debounceTimer);
   const text = document.getElementById('input').value.trim();
   if (!text) { document.getElementById('output').textContent = ''; return; }
+  // Debounce 800ms: traducir frases a medio escribir produce incoherencias.
+  // Solo se traduce cuando el usuario pausa de escribir.
   debounceTimer = setTimeout(async () => {
     const from = document.getElementById('from-lang').value;
     const to = document.getElementById('to-lang').value;
+    const seq = ++translateSeq;   // esta request es la más reciente
     document.getElementById('stat-time').textContent = 'Translating...';
     try {
       const resp = await fetch('/api/translate', {
@@ -138,6 +151,7 @@ async function translateText() {
         body: JSON.stringify({ text, from_lang: from, to_lang: to })
       });
       const data = await resp.json();
+      if (seq !== translateSeq) return;   // llegó una request más nueva: ignorar
       if (data.translation) {
         document.getElementById('output').textContent = data.translation;
         document.getElementById('stat-time').textContent = `${data.translation_time_ms}ms`;
@@ -146,9 +160,10 @@ async function translateText() {
         document.getElementById('output').textContent = '⚠️ ' + data.error;
       }
     } catch(e) {
+      if (seq !== translateSeq) return;
       document.getElementById('output').textContent = '⚠️ Server error';
     }
-  }, 300);
+  }, 800);
 }
 
 async function playOutput() {
@@ -179,46 +194,86 @@ function clearAll() {
   document.getElementById('stat-time').textContent = 'Ready';
 }
 
+// Graba WAV PCM int16 directamente en el navegador (Web Audio API).
+// El backend ASR espera WAV PCM (no webm/opus) — este formato funciona sin
+// conversión ni dependencias extra.
+let audioCtx = null;
+let micStream = null;
+let audioProcessor = null;
+let micSource = null;
+let pcmChunks = [];
+
+function encodeWav(samples, sampleRate) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); writeStr(8, 'WAVE');
+  writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  writeStr(36, 'data'); view.setUint32(40, samples.length * 2, true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++, off += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 async function toggleMic() {
   const btn = document.getElementById('mic-btn');
   if (!isRecording) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      audioChunks = [];
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const b64 = reader.result.split(',')[1];
-          document.getElementById('stat-time').textContent = 'Transcribing...';
-          try {
-            const resp = await fetch('/api/asr', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ audio: b64, lang: document.getElementById('from-lang').value })
-            });
-            const data = await resp.json();
-            if (data.text) {
-              document.getElementById('input').value = data.text;
-              translateText();
-            }
-          } catch(e) {}
-        };
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(t => t.stop());
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      micSource = audioCtx.createMediaStreamSource(micStream);
+      const sampleRate = audioCtx.sampleRate || 16000;
+      audioProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+      pcmChunks = [];
+      audioProcessor.onaudioprocess = e => {
+        const data = e.inputBuffer.getChannelData(0);
+        pcmChunks.push(new Float32Array(data));
       };
-      mediaRecorder.start();
+      micSource.connect(audioProcessor);
+      audioProcessor.connect(audioCtx.destination);
       isRecording = true;
       btn.classList.add('recording');
       btn.textContent = '⏹';
     } catch(e) { alert('Microphone access denied'); }
-  } else {
-    if (mediaRecorder) mediaRecorder.stop();
-    isRecording = false;
-    btn.classList.remove('recording');
-    btn.textContent = '🎤';
+    return;
   }
+  // Parar y enviar
+  isRecording = false;
+  btn.classList.remove('recording');
+  btn.textContent = '🎤';
+  try {
+    micSource.disconnect(); audioProcessor.disconnect();
+    micStream.getTracks().forEach(t => t.stop());
+  } catch(e) {}
+  if (!pcmChunks.length) return;
+  const flat = [];
+  pcmChunks.forEach(c => { for (let i = 0; i < c.length; i++) flat.push(c[i]); });
+  const sampleRate = audioCtx ? audioCtx.sampleRate || 16000 : 16000;
+  const wavBlob = encodeWav(new Float32Array(flat), sampleRate);
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const b64 = reader.result.split(',')[1];
+    document.getElementById('stat-time').textContent = 'Transcribing...';
+    try {
+      const resp = await fetch('/api/asr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: b64, lang: document.getElementById('from-lang').value })
+      });
+      const data = await resp.json();
+      if (data.text) {
+        document.getElementById('input').value = data.text;
+        translateText();
+      } else if (data.error) {
+        document.getElementById('stat-time').textContent = '⚠️ ' + data.error;
+      }
+    } catch(e) {}
+  };
+  reader.readAsDataURL(wavBlob);
 }
 
 document.getElementById('input').focus();

@@ -19,8 +19,17 @@ Pipeline asíncrono: mientras TTS reproduce la oración N, la GPU ya transcribe 
 
 ## Quick Start
 
+Desde el monorepo S2S (recomendado — gestiona venv, puertos y el motor LLM):
+
+```bash
+./alex start translator   # → http://localhost:3003
+```
+
+Lanzamiento manual (puerto real **3003**; `translator.py` no acepta `--port`):
+
 ```bash
 cd alex-translator
-python3 translator.py --port 3002
+source .venv/bin/activate   # o el venv compartido del ecosistema
+python3 translator.py       # → http://localhost:3003
 ```
 

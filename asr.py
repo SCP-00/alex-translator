@@ -65,6 +65,13 @@ def transcribe_audio(audio_b64, language="auto"):
         if len(pcm_int16) == 0:
             return None, None, "Empty audio"
         pcm_float32 = pcm_int16.astype(np.float32) / 32768.0
+        # Whisper espera 16kHz; el navegador graba a 44.1/48kHz. Resample lineal.
+        if sr != 16000 and len(pcm_float32) > 0:
+            n_out = int(len(pcm_float32) * 16000 / sr)
+            x_old = np.arange(len(pcm_float32))
+            x_new = np.linspace(0, len(pcm_float32) - 1, n_out)
+            pcm_float32 = np.interp(x_new, x_old, pcm_float32).astype(np.float32)
+            sr = 16000
         lang = None if language == "auto" else language
         segments, info = model.transcribe(
             pcm_float32, language=lang, beam_size=5,

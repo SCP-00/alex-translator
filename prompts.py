@@ -157,8 +157,8 @@ def parse_multi_output(response: str) -> Dict[str, str]:
         'exercise': '',
     }
     
-    if not response:
-        return result
+    if not response or not response.strip():
+        return {}
     
     # ── Strategy 1: Full-width brackets 【TAG】 ──
     tags = {}

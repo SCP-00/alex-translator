@@ -7,8 +7,10 @@ tts, asr, pipeline) accedido vía módulos.
 
 import base64
 import json
+import sys
 import time
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+from pathlib import Path
 from socketserver import ThreadingMixIn
 
 import torch
@@ -18,6 +20,16 @@ import pipeline
 import translate
 import tts
 from config import FRONTEND_DIR, LANG_MAP
+
+# ── Logging SDK compartido (ALEX) ────────────────────────────
+_SHARED_DIR = Path(__file__).parent.parent / "shared"
+if str(_SHARED_DIR) not in sys.path:
+    sys.path.insert(0, str(_SHARED_DIR))
+try:
+    from logging_sdk import request_context
+    _HAVE_SDK = True
+except Exception:
+    _HAVE_SDK = False
 
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -53,7 +65,7 @@ class TranslatorHandler(SimpleHTTPRequestHandler):
                 "tts_queue_size": pipeline._pipeline._tts_queue.qsize(),
             })
         elif self.path in ("/", "/index.html"):
-            self.path = "/translator.html"
+            self.path = "/index.html"
             super().do_GET()
         else:
             super().do_GET()
@@ -62,6 +74,13 @@ class TranslatorHandler(SimpleHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length) if length > 0 else b"{}"
 
+        if _HAVE_SDK:
+            with request_context("translator.http", event=f"http.{self.path}"):
+                self._route_post(body)
+        else:
+            self._route_post(body)
+
+    def _route_post(self, body):
         if self.path == "/api/translate":
             self._handle_translate(body)
         elif self.path == "/api/tts":

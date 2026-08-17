@@ -9,7 +9,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-PORT = int(os.environ.get("TRANSLATOR_PORT", "3003"))
+# PLAN_B_PORT lo fija el CLI `alex start translator` (puerto canónico 3003);
+# TRANSLATOR_PORT es el fallback si se lanza a mano.
+PORT = int(os.environ.get("PLAN_B_PORT") or os.environ.get("TRANSLATOR_PORT") or "3003")
 
 
 # ── Language maps ──────────────────────────────────────────

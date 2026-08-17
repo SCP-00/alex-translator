@@ -5,8 +5,10 @@ Esto reduce la latencia percibida a solo la etapa más lenta.
 """
 
 import queue
+import sys
 import threading
 import time
+from pathlib import Path
 
 import numpy as np
 
@@ -14,6 +16,24 @@ import asr
 import translate
 import tts
 from config import LANG_MAP
+
+# ── Logging SDK compartido (ALEX) ────────────────────────────
+_SHARED_DIR = Path(__file__).parent.parent / "shared"
+if str(_SHARED_DIR) not in sys.path:
+    sys.path.insert(0, str(_SHARED_DIR))
+try:
+    from logging_sdk import get_handler
+    log = get_handler("translator.pipeline")
+    _HAVE_SDK = True
+except Exception:
+    _HAVE_SDK = False
+
+
+def _log(event, msg, **data):
+    """Log vía SDK si está disponible, si no a consola."""
+    if _HAVE_SDK:
+        log.info(event, msg, **data)
+    print(f"[Pipeline] {msg}")
 
 
 class TranslationPipeline:
@@ -58,7 +78,8 @@ class TranslationPipeline:
         t.start()
         self._workers.append(t)
 
-        print("[Pipeline] Async workers started: ASR → Translation → TTS")
+        _log("pipeline.start", "Async workers started: ASR → Translation → TTS",
+             workers=len(self._workers))
 
     def stop(self):
         """Stop all pipeline workers."""
@@ -72,7 +93,7 @@ class TranslationPipeline:
         for t in self._workers:
             t.join(timeout=3)
         self._workers.clear()
-        print("[Pipeline] Workers stopped")
+        _log("pipeline.stop", "Workers stopped")
 
     def submit_audio(self, audio_b64, from_lang="auto", to_lang="es",
                      request_id=None, text_mode=False):
@@ -120,6 +141,9 @@ class TranslationPipeline:
                 asr_time = (time.time() - t0) * 1000
 
                 if error or not text:
+                    _log("pipeline.asr_error", "ASR failed",
+                         error=error or "ASR produced no text",
+                         request_id=item['request_id'])
                     with self._results_lock:
                         self._results[item['request_id']] = {
                             'error': error or "ASR produced no text",
@@ -144,7 +168,9 @@ class TranslationPipeline:
                     'detected_lang': detected_lang,
                 }
                 self._trans_queue.put(trans_item)
-                print(f"[Pipeline] ASR: \"{text[:50]}...\" ({asr_time:.0f}ms, lang={detected_lang})")
+                _log("pipeline.asr", "ASR transcribed",
+                     text=text[:80], asr_time_ms=int(asr_time), lang=detected_lang,
+                     request_id=item['request_id'])
 
             except Exception as e:
                 print(f"[Pipeline] ASR worker error: {e}")
@@ -194,7 +220,9 @@ class TranslationPipeline:
                     'detected_lang': item.get('detected_lang', 'auto'),
                 }
                 self._tts_queue.put(tts_item)
-                print(f"[Pipeline] Translation: \"{item['text'][:30]}\" → \"{translated[:30]}\" ({trans_time:.0f}ms)")
+                _log("pipeline.translate", "Translated",
+                     from_lang=item['from_lang'], to_lang=item['to_lang'],
+                     trans_time_ms=int(trans_time), request_id=item['request_id'])
 
             except Exception as e:
                 print(f"[Pipeline] Translation worker error: {e}")
@@ -256,7 +284,9 @@ class TranslationPipeline:
                 with self._results_lock:
                     self._results[item['request_id']] = result
 
-                print(f"[Pipeline] TTS: {tts_time:.0f}ms, total pipeline: {total_time:.0f}ms")
+                _log("pipeline.tts", "TTS synthesized",
+                     tts_time_ms=int(tts_time), total_time_ms=int(total_time),
+                     audio_secs=round(audio_secs, 2), request_id=item['request_id'])
 
             except Exception as e:
                 print(f"[Pipeline] TTS worker error: {e}")
